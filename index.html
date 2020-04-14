@@ -11,6 +11,7 @@
 
 <body>
     <h1>Tic Tac Toe</h1>
+    <h2 hidden id="win-message"></h2>
     <div id="game-board">
         <div class="xo-container" id="box0"></div>
         <div class="xo-container" id="box1"></div>
@@ -22,7 +23,14 @@
         <div class="xo-container" id="box7"></div>
         <div class="xo-container" id="box8"></div>
     </div>
-
+    <br>
+    <form>
+        <label class="form" for="player1">Player 1:</label>
+        <input class="form" type="text" id="player1" required>
+        <label class="form" for="player2">Player 2:</label>
+        <input class="form" type="text" id="player2" required>
+        <input type="button" value="Start" id="start">
+    </form>
     <script src="script.js"></script>
 </body>
 
