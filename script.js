@@ -1,33 +1,46 @@
-const xoContainers = document.querySelectorAll('.xo-container')
-const startButton = document.querySelector('#start');
-
-startButton.addEventListener('click', (e) => {
-    if (document.querySelector('#player1').value == '' || document.querySelector('#player2').value == '') {
-        return
-    }
-    console.log(document.querySelector('#player1').value);
-    e.target.setAttribute('value', 'Restart')
-    let form = document.querySelectorAll('.form')
-    for (let i = 0; i < form.length; i++) {
-        form[i].setAttribute('hidden', 'true');
-    }
-    gameController(document.querySelector('#player1').value, document.querySelector('#player2').value);
-})
-
 // Module for game board DOM manipulation
 const gameBoard = (() => {
-    
+    const startButton = document.querySelector('#start');
+    startButton.addEventListener('click', (e) => {
+        if (startButton.value == 'Start') {
+            if (document.querySelector('#player1').value == '' || document.querySelector('#player2').value == '') {
+                return
+            }
+            e.target.setAttribute('value', 'Restart')
+            let form = document.querySelectorAll('.form')
+            for (let i = 0; i < form.length; i++) {
+                form[i].setAttribute('hidden', 'true');
+            }
+        }
+        gameController.playGame(document.querySelector('#player1').value, document.querySelector('#player2').value);
+    })
+
+    const makeBoard = () => {
+        const gameBoardContainer = document.querySelector('#game-board-container');
+        if (gameBoardContainer.hasChildNodes() == true) {
+            //clear old items
+            var div = gameBoardContainer.lastElementChild;
+            while (div) {
+                gameBoardContainer.removeChild(div);
+                div = gameBoardContainer.lastElementChild;
+            }
+        }
+        for (let x = 0; x < 9; x++) {
+            const div = document.createElement('div');
+            div.setAttribute('class', 'xo-container');
+            div.setAttribute('id', 'box' + x);
+            gameBoardContainer.appendChild(div);
+        }
+        console.log('board made')
+    }
     //render contents of gameboard array to website
     const renderBoard = (square) => {
-        target = document.querySelector('#' + square.box);
-        target.textContent = square.icon;
-    }
-    const clearBoard = () => {
-        for (box in xoContainers) {
-            xoContainers[box].textContent = '';
+        if (gameController.getStatus() == true) {
+            target = document.querySelector('#' + square.box);
+            target.textContent = square.icon;
         }
     }
-    return { renderBoard, clearBoard }
+    return { makeBoard, renderBoard }
 })();
 
 //factory function for players
@@ -40,33 +53,51 @@ const Player = (name, icon) => {
     return {getName, getWins, winGame, getIcon }
 }
 
-//factory funciton for gameplay
-const gameController = (name1, name2) => {
-    gameBoard.clearBoard();
-    const player1 = Player(name1, 'X');
-    const player2 = Player(name2, 'O');
-    let activePlayer = player1
-    let selectedSquare;
+//module for gameplay
+const gameController = (() => {
+    let activePlayer;
     let winningPlayer;
+    let gameStatus;
+    let playedBoxes;
+    const getStatus = () => gameStatus;
 
-    let playedBoxes = []
-
-    const playGame = () => {
+    const playGame = (name1, name2) => {
+        gameStatus = true;
+        playedBoxes = []
+        const player1 = Player(name1, 'X');
+        const player2 = Player(name2, 'O');
+        activePlayer = player1;
+        gameBoard.makeBoard();
+        let xoContainers = document.querySelectorAll('.xo-container');
+        //make sure event listeners are added to all squares
         for (let x = 0; x < xoContainers.length; x++) {
+            
+            // make sure icon renders to correct box
             xoContainers[x].addEventListener('click', function chosenSquare(e) {
-                selectedSquare = e.target.id
+
+                square = {'box': e.target.id, 'icon': activePlayer.getIcon()}
+
+                //disable event listener
                 e.target.removeEventListener('click', chosenSquare);
-                square = {'box': selectedSquare, 'icon': activePlayer.getIcon()}
+
+                console.log(square)
+                
+                //render icon to correct square
                 gameBoard.renderBoard(square);
-                playedBoxes.push(square);
-                if (playedBoxes.length > 4)
-                    {
-                        checkForWinner(playedBoxes);
-                    }
+                
+                trackSquares(square);
+
+                //change active player
                 if (activePlayer == player1) { 
                     activePlayer = player2
                 } else { activePlayer = player1 }
             });
+        }
+    }
+    const trackSquares = (square) => {
+        if (gameStatus == true) {
+            playedBoxes.push(square);
+            if (playedBoxes.length > 4) { checkForWinner(playedBoxes); }
         }
     }
     const checkForWinner = (playedBoxes) => {
@@ -95,7 +126,6 @@ const gameController = (name1, name2) => {
                 boxes.sort();
             }
         } else if (boxes.length == 5) {
-            //this prints 'winner' twice because it checks each combo 2 times (when the same box is y and z).
             for (let y = 0; y < 5; y++) {
                 let splicedBox1 = boxes[y]
                 boxes.splice(y, 1);
@@ -108,6 +138,9 @@ const gameController = (name1, name2) => {
                 }
                 boxes.push(splicedBox1);
                 boxes.sort();
+            }
+            if (!winningPlayer) {
+                endGame();
             }
         }
     }
@@ -126,17 +159,20 @@ const gameController = (name1, name2) => {
         for (let x = 0; x < winCombos.length; x++) {
             //JSON stringify converts arrays to strings for comparison
             if (JSON.stringify(winCombos[x]) == JSON.stringify(a)) {
-                console.log('winner!')
-                const winMessage = document.querySelector('h2')
                 winningPlayer = activePlayer;
-                winMessage.textContent = `${winningPlayer.getName()} wins! Congratulations!`
-                winMessage.removeAttribute('hidden')
-                //end the game and disable everything
+                endGame();
             }
         }
     }
     const endGame = () => {
-        //TODO
+        const winMessage = document.querySelector('h2')
+        if (winningPlayer == '' || winningPlayer == null) {
+            winMessage.textContent = `It's a tie.`;
+        } else { winMessage.textContent = `${winningPlayer.getName()} wins! Congratulations!`}
+        winMessage.removeAttribute('hidden');
+        gameStatus = false;
+        winningPlayer = ''
     }
-    playGame(activePlayer);
-}
+    return { getStatus, playGame }
+})();
+gameBoard.makeBoard();
