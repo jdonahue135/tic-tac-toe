@@ -175,4 +175,3 @@ const gameController = (() => {
     }
     return { getStatus, playGame }
 })();
-gameBoard.makeBoard();
